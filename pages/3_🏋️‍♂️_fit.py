@@ -65,7 +65,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-engine = sqlalchemy.create_engine("sqlite:///database/eatandfit.db")
+engine = sqlalchemy.create_engine("sqlite:///database/dietexercise_companion.db")
 with engine.connect() as conn:
     all_exercise_results = conn.execute("SELECT * FROM Exercise").fetchall()
 exercise_keywords = [

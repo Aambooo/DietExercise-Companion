@@ -7,6 +7,41 @@ import base64
 import matplotlib
 import matplotlib.pyplot as plt
 
+
+def safe_create_dish(conn, dish_id):
+    """
+    Safely create a Dish object with error handling
+    """
+    try:
+        dish_result = conn.execute(
+            "SELECT * FROM Dish WHERE Id = :id", {"id": dish_id}
+        ).fetchone()
+
+        if dish_result is None:
+            st.warning(f"⚠️ Dish with ID '{dish_id}' not found in database")
+            # Return a placeholder dish
+            return create_placeholder_dish(dish_id)
+
+        return Dish(*dish_result)
+    except Exception as e:
+        st.error(f"❌ Error loading dish {dish_id}: {str(e)}")
+        return create_placeholder_dish(dish_id)
+
+
+def create_placeholder_dish(dish_id):
+    """
+    Create a placeholder dish when the actual dish is not found
+    """
+    return Dish(
+        id=dish_id,
+        name=f"Dish {dish_id} (Not Available)",
+        image=None,
+        nutrition="100;10;5;8",  # Default nutrition values
+        recipe="Placeholder ingredient: 1 serving",
+        steps="Recipe not available",
+    )
+
+
 st.set_page_config(page_title="DietExercise Companion")
 
 # A workaround using st.markdown() to apply some style sheets to the page.
@@ -214,7 +249,9 @@ if not st.session_state.page1["is_first_load"]:
         matplotlib.rcParams.update({"font.size": 8})
         label = ["Carbs", "Fat", "Protein"]
         colors = ["#F7D300", "#38BC56", "#D35454"]
-        engine = sqlalchemy.create_engine("sqlite:///database/eatandfit.db")
+        engine = sqlalchemy.create_engine(
+            "sqlite:///database/dietexercise_companion.db"
+        )
 
         with engine.connect() as conn:
             # Get standard calories each day for the user
@@ -235,6 +272,13 @@ if not st.session_state.page1["is_first_load"]:
                     "SELECT * FROM LowCarb WHERE Calories = :calories",
                     {"calories": standard_calories.low_carb},
                 ).fetchone()
+
+                if lc_result is None:
+                    st.error(
+                        f"❌ Low carb diet plan not found for {standard_calories.low_carb} calories"
+                    )
+                    st.stop()
+
                 low_carb_diet = Diet(*lc_result)
                 low_carb_nutrition_detail = low_carb_diet.get_nutrition_detail()
 
@@ -271,30 +315,27 @@ if not st.session_state.page1["is_first_load"]:
                     low_carb_ax.set_title("Calorie Distribution", fontsize=12, pad=20)
                     st.pyplot(low_carb_fig)
 
-                # Meal plan display
+                # Meal plan display - SAFER VERSION
                 st.markdown("#### 🍽️ Daily Meal Plan")
 
                 low_carb_breakfast_detail = low_carb_diet.get_breakfast_detail()
                 low_carb_lunch_detail = low_carb_diet.get_lunch_detail()
                 low_carb_dinner_detail = low_carb_diet.get_dinner_detail()
 
-                # Get dish information
+                # Get dish information SAFELY
                 dishes_info = {}
                 for meal_type, meal_detail in [
                     ("breakfast", low_carb_breakfast_detail),
                     ("lunch", low_carb_lunch_detail),
                     ("dinner", low_carb_dinner_detail),
                 ]:
-                    dish1_result = conn.execute(
-                        "SELECT * FROM Dish WHERE Id = :id", {"id": meal_detail.id1}
-                    ).fetchone()
-                    dish2_result = conn.execute(
-                        "SELECT * FROM Dish WHERE Id = :id", {"id": meal_detail.id2}
-                    ).fetchone()
+                    dish1 = safe_create_dish(conn, meal_detail.id1)
+                    dish2 = safe_create_dish(conn, meal_detail.id2)
+
                     dishes_info[meal_type] = {
                         "detail": meal_detail,
-                        "dish1": Dish(*dish1_result),
-                        "dish2": Dish(*dish2_result),
+                        "dish1": dish1,
+                        "dish2": dish2,
                     }
 
                 # Display meals in organized format
@@ -332,6 +373,13 @@ if not st.session_state.page1["is_first_load"]:
                     "SELECT * FROM ModerateCarb WHERE Calories = :calories",
                     {"calories": standard_calories.moderate_carb},
                 ).fetchone()
+
+                if mc_result is None:
+                    st.error(
+                        f"❌ Moderate carb diet plan not found for {standard_calories.moderate_carb} calories"
+                    )
+                    st.stop()
+
                 moderate_carb_diet = Diet(*mc_result)
                 moderate_carb_nutrition_detail = (
                     moderate_carb_diet.get_nutrition_detail()
@@ -372,7 +420,7 @@ if not st.session_state.page1["is_first_load"]:
                     )
                     st.pyplot(moderate_carb_fig)
 
-                # Similar meal plan display for moderate carb
+                # Similar meal plan display for moderate carb - SAFER VERSION
                 st.markdown("#### 🍽️ Daily Meal Plan")
                 moderate_carb_breakfast_detail = (
                     moderate_carb_diet.get_breakfast_detail()
@@ -380,20 +428,14 @@ if not st.session_state.page1["is_first_load"]:
                 moderate_carb_lunch_detail = moderate_carb_diet.get_lunch_detail()
                 moderate_carb_dinner_detail = moderate_carb_diet.get_dinner_detail()
 
-                # Display meals (similar structure as low carb)
+                # Display meals SAFELY
                 for meal_detail, meal_name in [
                     (moderate_carb_breakfast_detail, "Breakfast"),
                     (moderate_carb_lunch_detail, "Lunch"),
                     (moderate_carb_dinner_detail, "Dinner"),
                 ]:
-                    dish1_result = conn.execute(
-                        "SELECT * FROM Dish WHERE Id = :id", {"id": meal_detail.id1}
-                    ).fetchone()
-                    dish2_result = conn.execute(
-                        "SELECT * FROM Dish WHERE Id = :id", {"id": meal_detail.id2}
-                    ).fetchone()
-                    dish1 = Dish(*dish1_result)
-                    dish2 = Dish(*dish2_result)
+                    dish1 = safe_create_dish(conn, meal_detail.id1)
+                    dish2 = safe_create_dish(conn, meal_detail.id2)
 
                     st.markdown(f"**{meal_name}** - {meal_detail.calories} calories")
                     meal_col1, meal_col2 = st.columns(2)
@@ -410,6 +452,13 @@ if not st.session_state.page1["is_first_load"]:
                     "SELECT * FROM HighCarb WHERE Calories = :calories",
                     {"calories": standard_calories.high_carb},
                 ).fetchone()
+
+                if hc_result is None:
+                    st.error(
+                        f"❌ High carb diet plan not found for {standard_calories.high_carb} calories"
+                    )
+                    st.stop()
+
                 high_carb_diet = Diet(*hc_result)
                 high_carb_nutrition_detail = high_carb_diet.get_nutrition_detail()
 
@@ -446,26 +495,20 @@ if not st.session_state.page1["is_first_load"]:
                     high_carb_ax.set_title("Calorie Distribution", fontsize=12, pad=20)
                     st.pyplot(high_carb_fig)
 
-                # Similar meal plan display for high carb
+                # Similar meal plan display for high carb - SAFER VERSION
                 st.markdown("#### 🍽️ Daily Meal Plan")
                 high_carb_breakfast_detail = high_carb_diet.get_breakfast_detail()
                 high_carb_lunch_detail = high_carb_diet.get_lunch_detail()
                 high_carb_dinner_detail = high_carb_diet.get_dinner_detail()
 
-                # Display meals (similar structure)
+                # Display meals SAFELY
                 for meal_detail, meal_name in [
                     (high_carb_breakfast_detail, "Breakfast"),
                     (high_carb_lunch_detail, "Lunch"),
                     (high_carb_dinner_detail, "Dinner"),
                 ]:
-                    dish1_result = conn.execute(
-                        "SELECT * FROM Dish WHERE Id = :id", {"id": meal_detail.id1}
-                    ).fetchone()
-                    dish2_result = conn.execute(
-                        "SELECT * FROM Dish WHERE Id = :id", {"id": meal_detail.id2}
-                    ).fetchone()
-                    dish1 = Dish(*dish1_result)
-                    dish2 = Dish(*dish2_result)
+                    dish1 = safe_create_dish(conn, meal_detail.id1)
+                    dish2 = safe_create_dish(conn, meal_detail.id2)
 
                     st.markdown(f"**{meal_name}** - {meal_detail.calories} calories")
                     meal_col1, meal_col2 = st.columns(2)

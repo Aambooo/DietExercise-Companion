@@ -68,7 +68,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-engine = sqlalchemy.create_engine("sqlite:///database/eatandfit.db")
+engine = sqlalchemy.create_engine("sqlite:///database/dietexercise_companion.db")
 with engine.connect() as conn:
     all_dish_results = conn.execute("SELECT * FROM Dish").fetchall()
 dish_keywords = [
@@ -93,7 +93,23 @@ if dish_keyword != "":
         dish_result = conn.execute(
             "SELECT * FROM Dish WHERE Name = :name", {"name": dish_keyword}
         ).fetchone()
-        dish = Dish(*dish_result)
+
+        if dish_result is None:
+            st.error(f"❌ Dish '{dish_keyword}' not found in database")
+            st.info(
+                "This might be due to database path issues. Please check if your database is properly set up."
+            )
+            st.stop()
+
+        try:
+            dish = Dish(*dish_result)
+        except Exception as e:
+            st.error(f"❌ Error loading dish data: {str(e)}")
+            st.info(
+                "There might be an issue with the dish data format in the database."
+            )
+            st.stop()
+
         st.markdown(
             f"""
                 <h2 style="text-align: center">{dish.name}</h2>
@@ -102,14 +118,36 @@ if dish_keyword != "":
         )
         col1, col2, col3 = st.columns([1.3, 0.55, 0.15])
         with col1:
-            st.markdown(
-                f"""
-                <p style="text-align: right">
-                    <img src="data:image/jpeg;base64,{base64.b64encode(dish.image).decode('utf-8')}" width="90%">
-                </p>
-                """,
-                unsafe_allow_html=True,
-            )
+            # Check if image exists before displaying
+            if dish.image is not None:
+                try:
+                    st.markdown(
+                        f"""
+                        <p style="text-align: right">
+                            <img src="data:image/jpeg;base64,{base64.b64encode(dish.image).decode('utf-8')}" width="90%">
+                        </p>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                except Exception as e:
+                    st.warning("⚠️ Image could not be loaded")
+                    st.markdown(
+                        """
+                        <div style="text-align: center; padding: 50px; background-color: #f0f0f0; border-radius: 10px; margin: 20px;">
+                            <p>📷 Image not available</p>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.markdown(
+                    """
+                    <div style="text-align: center; padding: 50px; background-color: #f0f0f0; border-radius: 10px; margin: 20px;">
+                        <p>📷 No image available</p>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
         with col2:
             st.markdown(
                 f"""

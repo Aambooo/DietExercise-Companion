@@ -35,10 +35,15 @@ Thumbs.db
 *.log
 logs/
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# Database Files (Keep SQL scripts, ignore binary DB files)
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+database/dietexercise_companion.db
+
+# Images (keep logo, ignore large dish images)  
+images/dishes/
+!images/logo.png
 
 # Other
 .coverage

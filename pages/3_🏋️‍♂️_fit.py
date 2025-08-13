@@ -2,7 +2,7 @@ import streamlit as st
 import sqlalchemy
 from models.fit import *
 
-st.set_page_config(page_title='Eat & Fit', page_icon='images\logo.png')
+st.set_page_config(page_title="DietExercise Companion - Fitness", page_icon="🏋️‍♂️")
 
 # A workaround using st.markdown() to apply some style sheets to the page
 st.markdown(
@@ -38,22 +38,39 @@ st.markdown(
             padding-bottom: 0.25rem;
             }}
         </style>
-        """, unsafe_allow_html=True
-    )
+        """,
+    unsafe_allow_html=True,
+)
 
-# A workaround using st.columns() to move logo and title to the center of the page
-col1, col2, col3, col4, col5, col6, col7, col8 = st.columns([0.5, 0.5, 1, 0.75, 1, 0.75, 0.5, 0.5])
-with col4:
-    st.image(image='images\logo.png', width=140)
-with col5:
-    st.markdown("""<br/><h1 style="display: inline;">Eat & Fit</h1>
-                    <i style="font-size: 22px;">Weight-Loss Guide</i>
-                """, unsafe_allow_html=True)
+# Centered header without logo - full width and flexible
+st.markdown(
+    """
+    <div style="text-align: center; padding: 1.5rem 0; margin-bottom: 1.5rem;">
+        <h1 style="
+            color: #2E86AB; 
+            font-size: 2.8rem; 
+            font-weight: bold; 
+            margin-bottom: 0.3rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        ">Your DietExercise Companion</h1>
+        <p style="
+            color: #666; 
+            font-size: 1.2rem; 
+            font-style: italic; 
+            margin-top: 0;
+            font-weight: 300;
+        ">Know Your Workout & Nutritional Criteria</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 engine = sqlalchemy.create_engine("sqlite:///database/eatandfit.db")
 with engine.connect() as conn:
     all_exercise_results = conn.execute("SELECT * FROM Exercise").fetchall()
-exercise_keywords = ['',]
+exercise_keywords = [
+    "",
+]
 for e in all_exercise_results:
     exercise = Exercise(*e)
     exercise_keywords.append(exercise.name)
@@ -63,18 +80,22 @@ with col2:
     st.markdown(
         f"""
             <h1 style="text-align: center">Exercise Browser</h1>
-        """, unsafe_allow_html=True
+        """,
+        unsafe_allow_html=True,
     )
     exercise_keyword = st.selectbox("**Search**", tuple(exercise_keywords))
 
-if exercise_keyword != '':
+if exercise_keyword != "":
     with engine.connect() as conn:
-        exercise_result = conn.execute("SELECT * FROM Exercise WHERE Name = :name", {'name': exercise_keyword}).fetchone()
+        exercise_result = conn.execute(
+            "SELECT * FROM Exercise WHERE Name = :name", {"name": exercise_keyword}
+        ).fetchone()
         exercise = Exercise(*exercise_result)
         st.markdown(
             f"""
                 <h2 style="text-align: center">{exercise.name}</h2>
-            """, unsafe_allow_html=True
+            """,
+            unsafe_allow_html=True,
         )
 
     col1, col2, col3 = st.columns([0.15, 1.7, 0.15])
@@ -82,11 +103,12 @@ if exercise_keyword != '':
         st.markdown(
             f"""
                 <iframe width="100%" height="500px" allow="fullscreen;" src="{exercise.link}"></iframe>
-            """, unsafe_allow_html=True
+            """,
+            unsafe_allow_html=True,
         )
         st.subheader("I. Overview")
 
-        overview_builder = ''
+        overview_builder = ""
 
         for p in exercise.get_overview_paragraph():
             overview_builder += f"<p style='padding-left: 22px'>{p}</p>"
@@ -95,7 +117,9 @@ if exercise_keyword != '':
 
         st.subheader("II. Instructions")
 
-        instructions_builder = "<ul style='list-style-type: decimal; padding-left: 22px'>"
+        instructions_builder = (
+            "<ul style='list-style-type: decimal; padding-left: 22px'>"
+        )
 
         for li in exercise.get_introductions_detail():
             instructions_builder += f"<li>{li}</li>"
